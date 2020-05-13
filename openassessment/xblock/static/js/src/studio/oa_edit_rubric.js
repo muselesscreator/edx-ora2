@@ -1,3 +1,8 @@
+import $ from 'jquery';
+
+import Container from './oa_container';
+import { RubricCriterion } from './oa_container_item';
+import { Fields } from './oa_edit_fields';
 /**
  Interface for editing rubric definitions.
 
@@ -13,12 +18,13 @@
  * criterionUpdated: A criterion's label was updated in the rubric.
 
  **/
-OpenAssessment.EditRubricView = function(element, notifier) {
+export class EditRubricView {
+  constructor(element, notifier) {
     this.element = element;
     this.criterionAddButton = $('#openassessment_rubric_add_criterion', this.element);
 
-    this.criteriaContainer = new OpenAssessment.Container(
-        OpenAssessment.RubricCriterion, {
+    this.criteriaContainer = new Container(
+        RubricCriterion, {
             containerElement: $('#openassessment_criterion_list', this.element).get(0),
             templateElement: $('#openassessment_criterion_template', this.element).get(0),
             addButtonElement: $('#openassessment_rubric_add_criterion', this.element).get(0),
@@ -28,244 +34,257 @@ OpenAssessment.EditRubricView = function(element, notifier) {
         }
     );
     this.criteriaContainer.addEventListeners();
-};
 
-OpenAssessment.EditRubricView.prototype = {
-    /**
-     Construct a list of criteria definitions from the editor UI.
+    this.criteriaDefinition = this.criteriaDefinition.bind(this);
+    this.feedbackPrompt = this.feedbackPrompt.bind(this);
+    this.feedback_default_text = this.feedback_default_text.bind(this);
+    this.removeCreterion = this.removeCreterion.bind(this);
+    this.getAllCreteria = this.getAllCreteria.bind(this);
+    this.getCreterionItem = this.getCreterionItem.bind(this);
+    this.addOption = this.addOption.bind(this);
+    this.removeOption = this.removeOption.bind(this);
+    this.getAllOptions = this.getAllOptions.bind(this);
+    this.getOptionItem = this.getOptionItem.bind(this);
+    this.validate = this.validate.bind(this);
+    this.validationErrors = this.validationErrors.bind(this);
+    this.clearValidationErrors = this.clearValidationErrors.bind(this);
+  }
 
-     Returns:
-     list of criteria objects
+  /**
+   Construct a list of criteria definitions from the editor UI.
 
-     Example usage:
-     >>> editRubricView.criteriaDefinition();
-     [
-     {
-         name: "Criterion",
-         prompt: "Prompt",
-         order_num: 0,
-         feedback: "disabled",
-         options: [
-             {
-                 order_num: 0,
-                 points: 1,
-                 name: "Good",
-                 explanation: "Explanation"
-             },
-             ...
-         ]
-     },
-     ...
-     ]
+   Returns:
+   list of criteria objects
 
-     **/
-    criteriaDefinition: function() {
-        var criteria = this.criteriaContainer.getItemValues();
+   Example usage:
+   >>> editRubricView.criteriaDefinition();
+   [
+   {
+       name: "Criterion",
+       prompt: "Prompt",
+       order_num: 0,
+       feedback: "disabled",
+       options: [
+           {
+               order_num: 0,
+               points: 1,
+               name: "Good",
+               explanation: "Explanation"
+           },
+           ...
+       ]
+   },
+   ...
+   ]
 
-        // Add order_num fields for criteria and options
-        for (var criterionIndex = 0; criterionIndex < criteria.length; criterionIndex++) {
-            var criterion = criteria[criterionIndex];
-            criterion.order_num = criterionIndex;
-            for (var optionIndex = 0; optionIndex < criterion.options.length; optionIndex++) {
-                var option = criterion.options[optionIndex];
-                option.order_num = optionIndex;
-            }
-        }
+   **/
+  criteriaDefinition() {
+      var criteria = this.criteriaContainer.getItemValues();
 
-        return criteria;
-    },
+      // Add order_num fields for criteria and options
+      for (var criterionIndex = 0; criterionIndex < criteria.length; criterionIndex++) {
+          var criterion = criteria[criterionIndex];
+          criterion.order_num = criterionIndex;
+          for (var optionIndex = 0; optionIndex < criterion.options.length; optionIndex++) {
+              var option = criterion.options[optionIndex];
+              option.order_num = optionIndex;
+          }
+      }
 
-    /**
-     Get or set the feedback prompt in the editor.
-     This is the prompt shown to students when giving "overall" feedback
-     on a submission.
+      return criteria;
+  }
 
-     Args:
-     text (string, optional): If provided, set the feedback prompt to this value.
+  /**
+   Get or set the feedback prompt in the editor.
+   This is the prompt shown to students when giving "overall" feedback
+   on a submission.
 
-     Returns:
-     string
+   Args:
+   text (string, optional): If provided, set the feedback prompt to this value.
 
-     **/
-    feedbackPrompt: function(text) {
-        var sel = $('#openassessment_rubric_feedback', this.element);
-        return OpenAssessment.Fields.stringField(sel, text);
-    },
+   Returns:
+   string
 
-    /**
-     Get or set the default feedback response text in the editor.
-     The text is used as a student's default response to the feedback
-     prompt.
+   **/
+  feedbackPrompt(text) {
+      var sel = $('#openassessment_rubric_feedback', this.element);
+      return Fields.stringField(sel, text);
+  }
 
-     Args:
-     text (string, option): If provided, sets the default text to this value.
+  /**
+   Get or set the default feedback response text in the editor.
+   The text is used as a student's default response to the feedback
+   prompt.
 
-     Returns:
-     string
+   Args:
+   text (string, option): If provided, sets the default text to this value.
 
-     **/
-    feedback_default_text: function(text) {
-        var sel = $('#openassessment_rubric_feedback_default_text', this.element);
-        return OpenAssessment.Fields.stringField(sel, text);
-    },
+   Returns:
+   string
 
-    /**
-     Add a new criterion to the rubric.
-     Uses a client-side template to create the new criterion.
-     **/
-    addCriterion: function() {
-        this.criteriaContainer.add();
-    },
+   **/
+  feedback_default_text(text) {
+      var sel = $('#openassessment_rubric_feedback_default_text', this.element);
+      return Fields.stringField(sel, text);
+  }
 
-    /**
-     Remove a criterion from the rubric.
+  /**
+   Add a new criterion to the rubric.
+   Uses a client-side template to create the new criterion.
+   **/
+  addCriterion() {
+      this.criteriaContainer.add();
+  }
 
-     Args:
-     item (OpenAssessment.RubricCriterion): The criterion item to remove.
-     **/
-    removeCriterion: function(item) {
-        this.criteriaContainer.remove(item);
-    },
+  /**
+   Remove a criterion from the rubric.
 
-    /**
-     Retrieve all criteria from the rubric.
+   Args:
+   item (OpenAssessment.RubricCriterion): The criterion item to remove.
+   **/
+  removeCriterion(item) {
+      this.criteriaContainer.remove(item);
+  }
 
-     Returns:
-     Array of OpenAssessment.RubricCriterion objects.
+  /**
+   Retrieve all criteria from the rubric.
 
-     **/
-    getAllCriteria: function() {
-        return this.criteriaContainer.getAllItems();
-    },
+   Returns:
+   Array of OpenAssessment.RubricCriterion objects.
 
-    /**
-     Retrieve a criterion item from the rubric.
+   **/
+  getAllCriteria() {
+      return this.criteriaContainer.getAllItems();
+  }
 
-     Args:
-     index (int): The index of the criterion, starting from 0.
+  /**
+   Retrieve a criterion item from the rubric.
 
-     Returns:
-     OpenAssessment.RubricCriterion or null
+   Args:
+   index (int): The index of the criterion, starting from 0.
 
-     **/
-    getCriterionItem: function(index) {
-        return this.criteriaContainer.getItem(index);
-    },
+   Returns:
+   OpenAssessment.RubricCriterion or null
 
-    /**
-     Add a new option to the rubric.
+   **/
+  getCriterionItem(index) {
+      return this.criteriaContainer.getItem(index);
+  }
 
-     Args:
-     criterionIndex (int): The index of the criterion to which
-     the option will be added (starts from 0).
+  /**
+   Add a new option to the rubric.
 
-     **/
-    addOption: function(criterionIndex) {
-        var criterionItem = this.getCriterionItem(criterionIndex);
-        criterionItem.optionContainer.add();
-    },
+   Args:
+   criterionIndex (int): The index of the criterion to which
+   the option will be added (starts from 0).
 
-    /**
-     Remove an option from the rubric.
+   **/
+  addOption(criterionIndex) {
+      var criterionItem = this.getCriterionItem(criterionIndex);
+      criterionItem.optionContainer.add();
+  }
 
-     Args:
-     criterionIndex (int): The index of the criterion, starting from 0.
-     item (OpenAssessment.RubricOption): The option item to remove.
+  /**
+   Remove an option from the rubric.
 
-     **/
-    removeOption: function(criterionIndex, item) {
-        var criterionItem = this.getCriterionItem(criterionIndex);
-        criterionItem.optionContainer.remove(item);
-    },
+   Args:
+   criterionIndex (int): The index of the criterion, starting from 0.
+   item (OpenAssessment.RubricOption): The option item to remove.
 
-    /**
-     Retrieve all options for a particular criterion.
+   **/
+  removeOption(criterionIndex, item) {
+      var criterionItem = this.getCriterionItem(criterionIndex);
+      criterionItem.optionContainer.remove(item);
+  }
 
-     Args:
-     criterionIndex (int): The index of the criterion, starting from 0.
+  /**
+   Retrieve all options for a particular criterion.
 
-     Returns:
-     Array of OpenAssessment.RubricOption
-     **/
-    getAllOptions: function(criterionIndex) {
-        var criterionItem = this.getCriterionItem(criterionIndex);
-        return criterionItem.optionContainer.getAllItems();
-    },
+   Args:
+   criterionIndex (int): The index of the criterion, starting from 0.
 
-    /**
-     Retrieve a particular option from the rubric.
+   Returns:
+   Array of OpenAssessment.RubricOption
+   **/
+  getAllOptions(criterionIndex) {
+      var criterionItem = this.getCriterionItem(criterionIndex);
+      return criterionItem.optionContainer.getAllItems();
+  }
 
-     Args:
-     criterionIndex (int): The index of the criterion, starting from 0.
-     optionIndex (int): The index of the option within the criterion,
-     starting from 0.
+  /**
+   Retrieve a particular option from the rubric.
 
-     Returns:
-     OpenAssessment.RubricOption
+   Args:
+   criterionIndex (int): The index of the criterion, starting from 0.
+   optionIndex (int): The index of the option within the criterion,
+   starting from 0.
 
-     **/
-    getOptionItem: function(criterionIndex, optionIndex) {
-        var criterionItem = this.getCriterionItem(criterionIndex);
-        return criterionItem.optionContainer.getItem(optionIndex);
-    },
+   Returns:
+   OpenAssessment.RubricOption
 
-    /**
-     Mark validation errors.
+   **/
+  getOptionItem(criterionIndex, optionIndex) {
+      var criterionItem = this.getCriterionItem(criterionIndex);
+      return criterionItem.optionContainer.getItem(optionIndex);
+  }
 
-     Returns:
-     Boolean indicating whether the view is valid.
+  /**
+   Mark validation errors.
 
-     **/
-    validate: function() {
-        var criteria = this.getAllCriteria();
-        var isValid = criteria.length > 0;
-        if (!isValid) {
-            this.criterionAddButton
-                .addClass('openassessment_highlighted_field')
-                .click(function() {
-                    $(this).removeClass('openassessment_highlighted_field');
-                }
-                );
-        }
+   Returns:
+   Boolean indicating whether the view is valid.
 
-        $.each(criteria, function() {
-            isValid = (this.validate() && isValid);
-        });
+   **/
+  validate() {
+      var criteria = this.getAllCriteria();
+      var isValid = criteria.length > 0;
+      if (!isValid) {
+          this.criterionAddButton
+              .addClass('openassessment_highlighted_field')
+              .click(function() {
+                  $(this).removeClass('openassessment_highlighted_field');
+              }
+              );
+      }
 
-        return isValid;
-    },
+      $.each(criteria, function() {
+          isValid = (this.validate() && isValid);
+      });
 
-    /**
-     Return a list of validation errors visible in the UI.
-     Mainly useful for testing.
+      return isValid;
+  }
 
-     Returns:
-     list of string
+  /**
+   Return a list of validation errors visible in the UI.
+   Mainly useful for testing.
 
-     **/
-    validationErrors: function() {
-        var errors = [];
+   Returns:
+   list of string
 
-        if (this.criterionAddButton.hasClass('openassessment_highlighted_field')) {
-            errors.push('The rubric must contain at least one criterion');
-        }
+   **/
+  validationErrors() {
+      var errors = [];
 
-        // Sub-validates the criteria defined by the rubric
-        $.each(this.getAllCriteria(), function() {
-            errors = errors.concat(this.validationErrors());
-        });
+      if (this.criterionAddButton.hasClass('openassessment_highlighted_field')) {
+          errors.push('The rubric must contain at least one criterion');
+      }
 
-        return errors;
-    },
+      // Sub-validates the criteria defined by the rubric
+      $.each(this.getAllCriteria(), function() {
+          errors = errors.concat(this.validationErrors());
+      });
 
-    /**
-     Clear all validation errors from the UI.
-     **/
-    clearValidationErrors: function() {
-        this.criterionAddButton.removeClass('openassessment_highlighted_field');
+      return errors;
+  }
 
-        $.each(this.getAllCriteria(), function() {
-            this.clearValidationErrors();
-        });
-    },
+  /**
+   Clear all validation errors from the UI.
+   **/
+  clearValidationErrors() {
+      this.criterionAddButton.removeClass('openassessment_highlighted_field');
+
+      $.each(this.getAllCriteria(), function() {
+          this.clearValidationErrors();
+      });
+  }
 };

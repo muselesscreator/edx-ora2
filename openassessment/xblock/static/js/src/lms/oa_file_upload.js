@@ -14,7 +14,7 @@ Returns:
     JQuery promise
 
 */
-OpenAssessment.FileUploader = function() {
+export const FileUploader = () => {
     this.upload = function(url, file) {
         // eslint-disable-next-line new-cap
         return $.Deferred(
@@ -49,4 +49,6 @@ OpenAssessment.FileUploader = function() {
             }
         ).promise();
     };
-};
+}
+
+export default FileUploader;

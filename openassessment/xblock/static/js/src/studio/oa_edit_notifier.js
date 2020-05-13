@@ -21,27 +21,30 @@ Args:
     listeners (array): List of objects
 
 **/
-OpenAssessment.Notifier = function(listeners) {
+export class Notifier {
+  constructor(listeners) {
     this.listeners = listeners;
-};
 
-OpenAssessment.Notifier.prototype = {
-    /**
-    Fire a notification, which will be received
+    this.notificationFired = this.notificationFired.bind(this);
+  }
+  /**
+  Fire a notification, which will be received
 
-    Args:
-        name (string): The name of the notification.  This should
-            be the same as the name of the method implemented
-            by the listeners.
+  Args:
+      name (string): The name of the notification.  This should
+          be the same as the name of the method implemented
+          by the listeners.
 
-        data (object literal): Arbitrary data to include with the notification.
+      data (object literal): Arbitrary data to include with the notification.
 
-    **/
-    notificationFired: function(name, data) {
-        for (var i = 0; i < this.listeners.length; i++) {
-            if (typeof(this.listeners[i][name]) === 'function') {
-                this.listeners[i][name](data);
-            }
-        }
-    },
-};
+  **/
+  notificationFired(name, data) {
+      for (var i = 0; i < this.listeners.length; i++) {
+          if (typeof(this.listeners[i][name]) === 'function') {
+              this.listeners[i][name](data);
+          }
+      }
+  }
+}
+
+export default Notifier;

@@ -1,3 +1,17 @@
+import ResponseView from './oa_response';
+import StudentTrainingView from './oa_training';
+import SelfView from './oa_self';
+import PeerView from './oa_peer';
+import StaffView from './oa_staff';
+import GradeView from './oa_grade';
+import LeaderboardView from './oa_leaderboard';
+import MessageView from './oa_message';
+import StaffAreaView from './oa_staff_area';
+import FileUploader from './oa_file_upload';
+import CourseItemsListing from './oa_course_items_listing';
+
+import Server from '../os_server';
+
 /**
 Interface for student-facing views.
 
@@ -10,418 +24,434 @@ Args:
 Returns:
     OpenAssessment.BaseView
 **/
-OpenAssessment.BaseView = function(runtime, element, server, data) {
+export class BaseView {
+  IS_SHOWING_CLASS = 'is--showing';
+  SLIDABLE_CLASS = 'ui-slidable';
+  SLIDABLE_CONTENT_CLASS =  'ui-slidable__content';
+  SLIDABLE_CONTROLS_CLASS =  'ui-slidable__control';
+  SLIDABLE_CONTAINER_CLASS =  'ui-slidable__container';
+  READER_FEEDBACK_CLASS =  '.sr.reader-feedback';
+
+  constructor(runtime, element, server, data) {
     this.runtime = runtime;
     this.element = element;
     this.server = server;
     this.fileUploader = new OpenAssessment.FileUploader();
 
-    this.responseView = new OpenAssessment.ResponseView(this.element, this.server, this.fileUploader, this, data);
-    this.trainingView = new OpenAssessment.StudentTrainingView(this.element, this.server, this);
-    this.selfView = new OpenAssessment.SelfView(this.element, this.server, this);
-    this.peerView = new OpenAssessment.PeerView(this.element, this.server, this);
-    this.staffView = new OpenAssessment.StaffView(this.element, this.server, this);
-    this.gradeView = new OpenAssessment.GradeView(this.element, this.server, this);
-    this.leaderboardView = new OpenAssessment.LeaderboardView(this.element, this.server, this);
-    this.messageView = new OpenAssessment.MessageView(this.element, this.server, this);
+    this.responseView = new ResponseView(this.element, this.server, this.fileUploader, this, data);
+    this.trainingView = new StudentTrainingView(this.element, this.server, this);
+    this.selfView = new SelfView(this.element, this.server, this);
+    this.peerView = new PeerView(this.element, this.server, this);
+    this.staffView = new StaffView(this.element, this.server, this);
+    this.gradeView = new GradeView(this.element, this.server, this);
+    this.leaderboardView = new LeaderboardView(this.element, this.server, this);
+    this.messageView = new MessageView(this.element, this.server, this);
     // Staff-only area with information and tools for managing student submissions
-    this.staffAreaView = new OpenAssessment.StaffAreaView(this.element, this.server, this);
+    this.staffAreaView = new StaffAreaView(this.element, this.server, this);
+
     this.usageID = '';
     this.srStatusUpdates = [];
-};
+    this.unsavedChanges = {};
 
-if (typeof OpenAssessment.unsavedChanges === 'undefined' || !OpenAssessment.unsavedChanges) {
-    OpenAssessment.unsavedChanges = {};
-}
+    this._clearUnsavedChanges = this._clearUnsavedChanges.bind(this);
+    this.scrollToTop = this.scrollToTop.bind(this);
+    this.srClear = this.srClear.bind(this);
+    this.srReadTexts = this.srReadTexts.bind(this);
+    this.announceStatusChangeToSRandFocus  = this.announceStatusChangeToSRandFocus.bind(this);
+    this.getStatus = this.getStatus.bind(this);
+    this.setUpCollapseExpand = this.setUpCollapseExpand.bind(this);
+    this.bindLatexPreview = this.bindLatexPreview.bind(this);
+    this.getUsageID = this.getUsageID.bind(this);
+    this.load = this.load.bind(this);
+    this.loadAssessmentModules = this.loadAssessmentModules.bind(this);
+    this.loadMessageView = this.loadMessageView.bind(this);
+    this.toggleActionError = this.toggleActionError.bind(this);
+    this.showLoadError = this.showLoadError.bind(this);
+    this.unsavedWarningEnabled = this.unsavedWarningEnabled.bind(this);
+    this.buttonEnabled = this.buttonEnabled.bind(this);
 
-// This is used by unit tests to reset state.
-OpenAssessment.clearUnsavedChanges = function() {
-    OpenAssessment.unsavedChanges = {};
+  }
+
+  // This is used by unit tests to reset state.
+  _clearUnsavedChanges() {
+    this.unsavedChanges = {};
     window.onbeforeunload = null;
-};
+  };
 
-OpenAssessment.BaseView.prototype = {
 
-    IS_SHOWING_CLASS: 'is--showing',
-    SLIDABLE_CLASS: 'ui-slidable',
-    SLIDABLE_CONTENT_CLASS: 'ui-slidable__content',
-    SLIDABLE_CONTROLS_CLASS: 'ui-slidable__control',
-    SLIDABLE_CONTAINER_CLASS: 'ui-slidable__container',
-    READER_FEEDBACK_CLASS: '.sr.reader-feedback',
+  /**
+   * Checks to see if the scrollTo function is available, then scrolls to the
+   * top of the list of steps (or the specified selector) for this display.
+   *
+   * Ideally, we would not need to check if the function exists, and could
+   * import scrollTo, or other dependencies, into workbench.
+   *
+   * @param {string} selector optional CSS selector to scroll to. If not supplied,
+   *     the default value of ".openassessment__steps" is used.
+   */
+  scrollToTop(selector) {
+      if (!selector) {
+          selector = '.openassessment__steps';
+      }
+      if ($.scrollTo instanceof Function) {
+          $(window).scrollTo($(selector, this.element), 800, {offset: -50});
+          $(selector + ' > header .' + this.SLIDABLE_CLASS, this.element).focus();
+      }
+  }
 
-    /**
-     * Checks to see if the scrollTo function is available, then scrolls to the
-     * top of the list of steps (or the specified selector) for this display.
-     *
-     * Ideally, we would not need to check if the function exists, and could
-     * import scrollTo, or other dependencies, into workbench.
-     *
-     * @param {string} selector optional CSS selector to scroll to. If not supplied,
-     *     the default value of ".openassessment__steps" is used.
-     */
-    scrollToTop: function(selector) {
-        if (!selector) {
-            selector = '.openassessment__steps';
-        }
-        if ($.scrollTo instanceof Function) {
-            $(window).scrollTo($(selector, this.element), 800, {offset: -50});
-            $(selector + ' > header .' + this.SLIDABLE_CLASS, this.element).focus();
-        }
-    },
+  /**
+   * Clear the text in the Aria live region.
+   */
+  srClear() {
+      $(this.READER_FEEDBACK_CLASS).html('');
+  },
 
-    /**
-     * Clear the text in the Aria live region.
-     */
-    srClear: function() {
-        $(this.READER_FEEDBACK_CLASS).html('');
-    },
+  /**
+   * Add the text messages to the Aria live region.
+   *
+   * @param {string[]} texts
+   */
+  srReadTexts(texts) {
+      var $readerFeedbackSelector = $(this.READER_FEEDBACK_CLASS),
+          htmlFeedback = '';
+      this.srClear();
+      $.each(texts, function(ids, value) {
+          htmlFeedback = htmlFeedback + '<p>' + value + '</p>\n';
+      });
+      $readerFeedbackSelector.html(htmlFeedback);
+  },
 
-    /**
-     * Add the text messages to the Aria live region.
-     *
-     * @param {string[]} texts
-     */
-    srReadTexts: function(texts) {
-        var $readerFeedbackSelector = $(this.READER_FEEDBACK_CLASS),
-            htmlFeedback = '';
-        this.srClear();
-        $.each(texts, function(ids, value) {
-            htmlFeedback = htmlFeedback + '<p>' + value + '</p>\n';
-        });
-        $readerFeedbackSelector.html(htmlFeedback);
-    },
+  /**
+   * Checks the rendering status of the views that may require Screen Reader Status updates.
+   *
+   * The only views that should be added here are those that require Screen Reader updates when moving from one
+   * step to another.
+   *
+   * @return {boolean} true if any step's view is still loading.
+   */
+  get areSRStepsLoading() {
+      return this.responseView.isRendering ||
+          this.peerView.isRendering ||
+          this.selfView.isRendering ||
+          this.gradeView.isRendering ||
+          this.trainingView.isRendering ||
+          this.staffView.isRendering;
+  },
 
-    /**
-     * Checks the rendering status of the views that may require Screen Reader Status updates.
-     *
-     * The only views that should be added here are those that require Screen Reader updates when moving from one
-     * step to another.
-     *
-     * @return {boolean} true if any step's view is still loading.
-     */
-    areSRStepsLoading: function() {
-        return this.responseView.isRendering ||
-            this.peerView.isRendering ||
-            this.selfView.isRendering ||
-            this.gradeView.isRendering ||
-            this.trainingView.isRendering ||
-            this.staffView.isRendering;
-    },
+  /**
+   * Updates text in the Aria live region if all sections are rendered and focuses on the specified ID.
+   *
+   * @param {String} stepID - The id of the Step being worked on.
+   * @param {String} usageID  - The Usage id of the xBlock.
+   * @param {boolean} gradeStatus - true if this is a Grade status, false if it is an assessment status.
+   * @param {Object} currentView - Current active view.
+   * @param {String} focusID - The ID of the region to focus on.
+   */
+  announceStatusChangeToSRandFocus(stepID, usageID, gradeStatus, currentView, focusID) {
+      var text = this.getStatus(stepID, currentView, gradeStatus);
 
-    /**
-     * Updates text in the Aria live region if all sections are rendered and focuses on the specified ID.
-     *
-     * @param {String} stepID - The id of the Step being worked on.
-     * @param {String} usageID  - The Usage id of the xBlock.
-     * @param {boolean} gradeStatus - true if this is a Grade status, false if it is an assessment status.
-     * @param {Object} currentView - Current active view.
-     * @param {String} focusID - The ID of the region to focus on.
-     */
-    announceStatusChangeToSRandFocus: function(stepID, usageID, gradeStatus, currentView, focusID) {
-        var text = this.getStatus(stepID, currentView, gradeStatus);
+      if (typeof usageID !== 'undefined' &&
+          $(stepID, currentView.element).hasClass('is--showing') &&
+          typeof focusID !== 'undefined') {
+          $(focusID, currentView.element).focus();
+          this.srStatusUpdates.push(text);
+      } else if (currentView.announceStatus) {
+          this.srStatusUpdates.push(text);
+      }
+      if (!this.areSRStepsLoading && this.srStatusUpdates.length > 0) {
+          this.srReadTexts(this.srStatusUpdates);
+          this.srStatusUpdates = [];
+      }
+      currentView.announceStatus = false;
+  },
 
-        if (typeof usageID !== 'undefined' &&
-            $(stepID, currentView.element).hasClass('is--showing') &&
-            typeof focusID !== 'undefined') {
-            $(focusID, currentView.element).focus();
-            this.srStatusUpdates.push(text);
-        } else if (currentView.announceStatus) {
-            this.srStatusUpdates.push(text);
-        }
-        if (!this.areSRStepsLoading() && this.srStatusUpdates.length > 0) {
-            this.srReadTexts(this.srStatusUpdates);
-            this.srStatusUpdates = [];
-        }
-        currentView.announceStatus = false;
-    },
+  /**
+   * Retrieves and returns the current status of a given step.
+   *
+   * @param {String} stepID - The id of the Step to retrieve status for.
+   * @param {Object} currentView - The current view.
+   * @param {boolean} gradeStatus - true if the status to be retrieved is the grade status,
+   *      false if it is the assessment status
+   * @return {String} - the current status.
+   */
+  getStatus(stepID, currentView, gradeStatus) {
+      var cssBase = stepID + ' .step__header .step__title ';
+      var cssStringTitle = cssBase + '.step__label';
+      var cssStringStatus = cssBase + '.step__status';
 
-    /**
-     * Retrieves and returns the current status of a given step.
-     *
-     * @param {String} stepID - The id of the Step to retrieve status for.
-     * @param {Object} currentView - The current view.
-     * @param {boolean} gradeStatus - true if the status to be retrieved is the grade status,
-     *      false if it is the assessment status
-     * @return {String} - the current status.
-     */
-    getStatus: function(stepID, currentView, gradeStatus) {
-        var cssBase = stepID + ' .step__header .step__title ';
-        var cssStringTitle = cssBase + '.step__label';
-        var cssStringStatus = cssBase + '.step__status';
+      if (gradeStatus) {
+          cssStringStatus = cssBase + '.grade__value';
+      }
 
-        if (gradeStatus) {
-            cssStringStatus = cssBase + '.grade__value';
-        }
+      return $(cssStringTitle, currentView.element).text().trim() + ' ' +
+          $(cssStringStatus, currentView.element).text().trim();
+  }
 
-        return $(cssStringTitle, currentView.element).text().trim() + ' ' +
-            $(cssStringStatus, currentView.element).text().trim();
-    },
+  /**
+   * Install click handlers to expand/collapse a section.
+   *
+   * @param {element} parentElement JQuery selector for the container element.
+   */
+  setUpCollapseExpand(parentElement) {
+      var view = this;
 
-    /**
-     * Install click handlers to expand/collapse a section.
-     *
-     * @param {element} parentElement JQuery selector for the container element.
-     */
-    setUpCollapseExpand: function(parentElement) {
-        var view = this;
+      $('.' + view.SLIDABLE_CONTROLS_CLASS, parentElement).each(function() {
+          $(this).on('click', function(event) {
+              event.preventDefault();
 
-        $('.' + view.SLIDABLE_CONTROLS_CLASS, parentElement).each(function() {
-            $(this).on('click', function(event) {
-                event.preventDefault();
+              var $slidableControl = $(event.target).closest('.' + view.SLIDABLE_CONTROLS_CLASS);
 
-                var $slidableControl = $(event.target).closest('.' + view.SLIDABLE_CONTROLS_CLASS);
+              var $container = $slidableControl.closest('.' + view.SLIDABLE_CONTAINER_CLASS);
+              var $toggleButton = $slidableControl.find('.' + view.SLIDABLE_CLASS);
+              var $panel = $slidableControl.next('.' + view.SLIDABLE_CONTENT_CLASS);
 
-                var $container = $slidableControl.closest('.' + view.SLIDABLE_CONTAINER_CLASS);
-                var $toggleButton = $slidableControl.find('.' + view.SLIDABLE_CLASS);
-                var $panel = $slidableControl.next('.' + view.SLIDABLE_CONTENT_CLASS);
+              if ($container.hasClass('is--showing')) {
+                  $panel.slideUp();
+                  $toggleButton.attr('aria-expanded', 'false');
+                  $container.removeClass('is--showing');
+              } else if (!$container.hasClass('has--error') &&
+                  !$container.hasClass('is--empty') &&
+                  !$container.hasClass('is--unavailable')) {
+                  $panel.slideDown();
+                  $toggleButton.attr('aria-expanded', 'true');
+                  $container.addClass('is--showing');
+              }
 
-                if ($container.hasClass('is--showing')) {
-                    $panel.slideUp();
-                    $toggleButton.attr('aria-expanded', 'false');
-                    $container.removeClass('is--showing');
-                } else if (!$container.hasClass('has--error') &&
-                    !$container.hasClass('is--empty') &&
-                    !$container.hasClass('is--unavailable')) {
-                    $panel.slideDown();
-                    $toggleButton.attr('aria-expanded', 'true');
-                    $container.addClass('is--showing');
-                }
+              $container.removeClass('is--initially--collapsed ');
+          });
+      });
+  }
 
-                $container.removeClass('is--initially--collapsed ');
-            });
-        });
-    },
+  /**
+   *Install click handler for the LaTeX preview button.
+   *
+   * @param {element} parentElement JQuery selector for the container element.
+   */
+  bindLatexPreview(parentElement) {
+      // keep the preview as display none at first
+      parentElement.find('.submission__preview__item').hide();
+      parentElement.find('.submission__preview').click(
+          function(eventObject) {
+              eventObject.preventDefault();
+              var previewName = $(eventObject.target).data('input');
+              // extract typed-in response and replace newline with br
+              var previewText = parentElement.find('textarea[data-preview="' + previewName + '"]').val();
+              var previewContainer = parentElement.find('.preview_content[data-preview="' + previewName + '"]');
+              previewContainer.html(previewText.replace(/\r\n|\r|\n/g, '<br />'));
 
-    /**
-     *Install click handler for the LaTeX preview button.
-     *
-     * @param {element} parentElement JQuery selector for the container element.
-     */
-    bindLatexPreview: function(parentElement) {
-        // keep the preview as display none at first
-        parentElement.find('.submission__preview__item').hide();
-        parentElement.find('.submission__preview').click(
-            function(eventObject) {
-                eventObject.preventDefault();
-                var previewName = $(eventObject.target).data('input');
-                // extract typed-in response and replace newline with br
-                var previewText = parentElement.find('textarea[data-preview="' + previewName + '"]').val();
-                var previewContainer = parentElement.find('.preview_content[data-preview="' + previewName + '"]');
-                previewContainer.html(previewText.replace(/\r\n|\r|\n/g, '<br />'));
+              // Render in mathjax
+              previewContainer.parent().parent().parent().show();
+              // eslint-disable-next-line new-cap
+              MathJax.Hub.Queue(['Typeset', MathJax.Hub, previewContainer[0]]);
+          }
+      );
+  }
 
-                // Render in mathjax
-                previewContainer.parent().parent().parent().show();
-                // eslint-disable-next-line new-cap
-                MathJax.Hub.Queue(['Typeset', MathJax.Hub, previewContainer[0]]);
-            }
-        );
-    },
+  /**
+   * Get usage key of an XBlock.
+   */
+  getUsageID() {
+      if (!this.usageID) {
+          this.usageID = $(this.element).data('usage-id');
+      }
+      return this.usageID;
+  }
 
-    /**
-     * Get usage key of an XBlock.
-     */
-    getUsageID: function() {
-        if (!this.usageID) {
-            this.usageID = $(this.element).data('usage-id');
-        }
-        return this.usageID;
-    },
+  /**
+   * Asynchronously load each sub-view into the DOM.
+   */
+  load() {
+      this.responseView.load();
+      this.loadAssessmentModules();
+      this.staffAreaView.load();
+  }
 
-    /**
-     * Asynchronously load each sub-view into the DOM.
-     */
-    load: function() {
-        this.responseView.load();
-        this.loadAssessmentModules();
-        this.staffAreaView.load();
-    },
+  /**
+   * Refresh the Assessment Modules. This should be called any time an action is
+   * performed by the user.
+   */
+  loadAssessmentModules(usageID) {
+      this.trainingView.load(usageID);
+      this.peerView.load(usageID);
+      this.staffView.load(usageID);
+      this.selfView.load(usageID);
+      this.gradeView.load(usageID);
+      this.leaderboardView.load(usageID);
 
-    /**
-     * Refresh the Assessment Modules. This should be called any time an action is
-     * performed by the user.
-     */
-    loadAssessmentModules: function(usageID) {
-        this.trainingView.load(usageID);
-        this.peerView.load(usageID);
-        this.staffView.load(usageID);
-        this.selfView.load(usageID);
-        this.gradeView.load(usageID);
-        this.leaderboardView.load(usageID);
+      /**
+      this.messageView.load() is intentionally omitted.
+      Because of the asynchronous loading, there is no way to tell (from the perspective of the
+      messageView) whether or not the peer view was able to grab an assessment to assess. Any
+      asynchronous strategy would run into a race condition based around this problem at some
+      point.  Instead, we created a field in the XBlock called no_peers, which is set by the
+      Peer XBlock Handler, and which is examined by the Message XBlock Handler.
 
-        /**
-        this.messageView.load() is intentionally omitted.
-        Because of the asynchronous loading, there is no way to tell (from the perspective of the
-        messageView) whether or not the peer view was able to grab an assessment to assess. Any
-        asynchronous strategy would run into a race condition based around this problem at some
-        point.  Instead, we created a field in the XBlock called no_peers, which is set by the
-        Peer XBlock Handler, and which is examined by the Message XBlock Handler.
+      To Avoid rendering the message more than one time per update/load (and avoiding all comp-
+      lications that that would likely induce), we chose to load the method view only after
+      the peer view has been loaded.  This is achieved by having the peer view  call to render
+      the message view after rendering itself but before exiting its load method.
+      */
+  }
 
-        To Avoid rendering the message more than one time per update/load (and avoiding all comp-
-        lications that that would likely induce), we chose to load the method view only after
-        the peer view has been loaded.  This is achieved by having the peer view  call to render
-        the message view after rendering itself but before exiting its load method.
-        */
-    },
+  /**
+   * Refresh the message only (called by PeerView to update and avoid race condition)
+   */
+  loadMessageView() {
+      this.messageView.load();
+  }
 
-    /**
-     * Refresh the message only (called by PeerView to update and avoid race condition)
-     */
-    loadMessageView: function() {
-        this.messageView.load();
-    },
+  /**
+   * Report an error to the user.
+   *
+   * @param {string} type The type of error. Options are "save", submit", "peer", and "self".
+   * @param {string} message The error message to display, or if null hide the message.
+   *     Note: loading errors are never hidden once displayed.
+   */
+  toggleActionError(type, message) {
+      var element = this.element;
+      var container = null;
+      if (type === 'save') {
+          container = '.response__submission__actions';
+      } else if (type === 'submit' || type === 'peer' || type === 'self' || type === 'student-training') {
+          container = '.step__actions';
+      } else if (type === 'feedback_assess') {
+          container = '.submission__feedback__actions';
+      } else if (type === 'upload') {
+          container = '.upload__error';
+      } else if (type === 'delete') {
+          container = '.delete__error';
+      }
 
-    /**
-     * Report an error to the user.
-     *
-     * @param {string} type The type of error. Options are "save", submit", "peer", and "self".
-     * @param {string} message The error message to display, or if null hide the message.
-     *     Note: loading errors are never hidden once displayed.
-     */
-    toggleActionError: function(type, message) {
-        var element = this.element;
-        var container = null;
-        if (type === 'save') {
-            container = '.response__submission__actions';
-        } else if (type === 'submit' || type === 'peer' || type === 'self' || type === 'student-training') {
-            container = '.step__actions';
-        } else if (type === 'feedback_assess') {
-            container = '.submission__feedback__actions';
-        } else if (type === 'upload') {
-            container = '.upload__error';
-        } else if (type === 'delete') {
-            container = '.delete__error';
-        }
+      // If we don't have anywhere to put the message, just log it to the console
+      if (container === null) {
+          if (message !== null) {console.log(message);}
+      } else {
+          // Insert the error message
+          $(container + ' .message__content', element).html('<p>' + (message ? _.escape(message) : '') + '</p>');
+          // Toggle the error class
+          $(container, element).toggleClass('has--error', message !== null);
+          // Send focus to the error message
+          $(container + ' > .message', element).focus();
+      }
 
-        // If we don't have anywhere to put the message, just log it to the console
-        if (container === null) {
-            if (message !== null) {console.log(message);}
-        } else {
-            // Insert the error message
-            $(container + ' .message__content', element).html('<p>' + (message ? _.escape(message) : '') + '</p>');
-            // Toggle the error class
-            $(container, element).toggleClass('has--error', message !== null);
-            // Send focus to the error message
-            $(container + ' > .message', element).focus();
-        }
+      if (message !== null) {
+          var contentTitle = $(container + ' .message__title').text();
+          this.srReadTexts([contentTitle, message]);
+      }
+  }
 
-        if (message !== null) {
-            var contentTitle = $(container + ' .message__title').text();
-            this.srReadTexts([contentTitle, message]);
-        }
-    },
+  /**
+   * Report an error loading a step.
+   *
+   * @param {string} stepName The step that could not be loaded.
+   * @param {string} errorMessage An optional error message to use instead of the default.
+   */
+  showLoadError(stepName, errorMessage) {
+      if (!errorMessage) {
+          errorMessage = gettext('Unable to load');
+      }
+      var $container = $('.step--' + stepName);
+      $container.toggleClass('has--error', true);
+      $container.removeClass('is--showing');
+      $container.find('.ui-slidable').attr('aria-expanded', 'false');
+      $container.find('.step__status__value i').removeClass().addClass('icon fa fa-exclamation-triangle');
+      $container.find('.step__status__value .copy').html(_.escape(errorMessage));
+  }
 
-    /**
-     * Report an error loading a step.
-     *
-     * @param {string} stepName The step that could not be loaded.
-     * @param {string} errorMessage An optional error message to use instead of the default.
-     */
-    showLoadError: function(stepName, errorMessage) {
-        if (!errorMessage) {
-            errorMessage = gettext('Unable to load');
-        }
-        var $container = $('.step--' + stepName);
-        $container.toggleClass('has--error', true);
-        $container.removeClass('is--showing');
-        $container.find('.ui-slidable').attr('aria-expanded', 'false');
-        $container.find('.step__status__value i').removeClass().addClass('icon fa fa-exclamation-triangle');
-        $container.find('.step__status__value .copy').html(_.escape(errorMessage));
-    },
+  /**
+   * Enable/disable the "navigate away" warning to alert the user of unsaved changes.
+   *
+   * @param {boolean} enabled If specified, set whether the warning is enabled.
+   * @param {string} key A unique key related to the type of unsaved changes. Must be supplied
+   * if "enabled" is also supplied.
+   * @param {string} message The message to show if navigating away with unsaved changes. Only needed
+   * if "enabled" is true.
+   * @return {boolean} Whether the warning is enabled (only if "enabled" argument is not supplied).
+   */
+  unsavedWarningEnabled(enabled, key, message) {
+      if (typeof enabled === 'undefined') {
+          return (window.onbeforeunload !== null);
+      } else {
+          // To support multiple ORA XBlocks on the same page, store state by XBlock usage-id.
+          var usageID = $(this.element).data('usage-id');
+          if (enabled) {
+              if (typeof this.unsavedChanges[usageID] === 'undefined' ||
+                  !this.unsavedChanges[usageID]) {
+                  this.unsavedChanges[usageID] = {};
+              }
+              this.unsavedChanges[usageID][key] = message;
+              window.onbeforeunload = function() {
+                  for (var xblockUsageID in this.unsavedChanges) {
+                      if (this.unsavedChanges.hasOwnProperty(xblockUsageID)) {
+                          for (var key in this.unsavedChanges[xblockUsageID]) {
+                              if (this.unsavedChanges[xblockUsageID].hasOwnProperty(key)) {
+                                  return this.unsavedChanges[xblockUsageID][key];
+                              }
+                          }
+                      }
+                  }
+              };
+          } else {
+              if (typeof this.unsavedChanges[usageID] !== 'undefined') {
+                  delete this.unsavedChanges[usageID][key];
+                  if ($.isEmptyObject(this.unsavedChanges[usageID])) {
+                      delete this.unsavedChanges[usageID];
+                  }
+                  if ($.isEmptyObject(this.unsavedChanges)) {
+                      window.onbeforeunload = null;
+                  }
+              }
+          }
+      }
+  }
 
-    /**
-     * Enable/disable the "navigate away" warning to alert the user of unsaved changes.
-     *
-     * @param {boolean} enabled If specified, set whether the warning is enabled.
-     * @param {string} key A unique key related to the type of unsaved changes. Must be supplied
-     * if "enabled" is also supplied.
-     * @param {string} message The message to show if navigating away with unsaved changes. Only needed
-     * if "enabled" is true.
-     * @return {boolean} Whether the warning is enabled (only if "enabled" argument is not supplied).
-     */
-    unsavedWarningEnabled: function(enabled, key, message) {
-        if (typeof enabled === 'undefined') {
-            return (window.onbeforeunload !== null);
-        } else {
-            // To support multiple ORA XBlocks on the same page, store state by XBlock usage-id.
-            var usageID = $(this.element).data('usage-id');
-            if (enabled) {
-                if (typeof OpenAssessment.unsavedChanges[usageID] === 'undefined' ||
-                    !OpenAssessment.unsavedChanges[usageID]) {
-                    OpenAssessment.unsavedChanges[usageID] = {};
-                }
-                OpenAssessment.unsavedChanges[usageID][key] = message;
-                window.onbeforeunload = function() {
-                    for (var xblockUsageID in OpenAssessment.unsavedChanges) {
-                        if (OpenAssessment.unsavedChanges.hasOwnProperty(xblockUsageID)) {
-                            for (var key in OpenAssessment.unsavedChanges[xblockUsageID]) {
-                                if (OpenAssessment.unsavedChanges[xblockUsageID].hasOwnProperty(key)) {
-                                    return OpenAssessment.unsavedChanges[xblockUsageID][key];
-                                }
-                            }
-                        }
-                    }
-                };
-            } else {
-                if (typeof OpenAssessment.unsavedChanges[usageID] !== 'undefined') {
-                    delete OpenAssessment.unsavedChanges[usageID][key];
-                    if ($.isEmptyObject(OpenAssessment.unsavedChanges[usageID])) {
-                        delete OpenAssessment.unsavedChanges[usageID];
-                    }
-                    if ($.isEmptyObject(OpenAssessment.unsavedChanges)) {
-                        window.onbeforeunload = null;
-                    }
-                }
-            }
-        }
-    },
-
-    /**
-     * Enable/disable the button with the given class name.
-     *
-     * @param {string} className The css class to find the button
-     * @param {boolean} enabled If specified enables or disables the button. If not specified,
-     *     the state of the button is not changed, but the current enabled status is returned.
-     * @return {boolean} whether or not the button is enabled
-     */
-    buttonEnabled: function(className, enabled) {
-        var $element = $(className, this.element);
-        if (typeof enabled === 'undefined') {
-            return !$element.prop('disabled');
-        } else {
-            $element.prop('disabled', !enabled);
-            return enabled;
-        }
-    },
+  /**
+   * Enable/disable the button with the given class name.
+   *
+   * @param {string} className The css class to find the button
+   * @param {boolean} enabled If specified enables or disables the button. If not specified,
+   *     the state of the button is not changed, but the current enabled status is returned.
+   * @return {boolean} whether or not the button is enabled
+   */
+  buttonEnabled(className, enabled) {
+      var $element = $(className, this.element);
+      if (typeof enabled === 'undefined') {
+          return !$element.prop('disabled');
+      } else {
+          $element.prop('disabled', !enabled);
+          return enabled;
+      }
+  }
 };
 
 /* XBlock JavaScript entry point for OpenAssessmentXBlock. */
 /* jshint unused:false */
 // eslint-disable-next-line no-unused-vars
-function OpenAssessmentBlock(runtime, element, data) {
-    /**
-    Render views within the base view on page load.
-    **/
-    var server = new OpenAssessment.Server(runtime, element);
-    var view = new OpenAssessment.BaseView(runtime, element, server, data);
-    view.load();
+export const OpenAssessmentBlock = (runtime, element, data) => {
+  /**
+  Render views within the base view on page load.
+  **/
+  var server = new Server(runtime, element);
+  var view = new BaseView(runtime, element, server, data);
+  view.load();
 }
 
 /* XBlock JavaScript entry point for OpenAssessmentXBlock. */
 /* jshint unused:false */
 // eslint-disable-next-line no-unused-vars
-function CourseOpenResponsesListingBlock(runtime, element, data) {
-    var view = new OpenAssessment.CourseItemsListingView(runtime, element);
-    view.refreshGrids();
+export const (CourseOpenResponsesListingBlock(runtime, element, data) => {
+  var view = new .CourseItemsListingView(runtime, element);
+  view.refreshGrids();
 }
 
 /* XBlock JavaScript entry point for OpenAssessmentXBlock. */
 /* jshint unused:false */
 // eslint-disable-next-line no-unused-vars
-function StaffAssessmentBlock(runtime, element, data) {
-    /**
-    Render auxiliary view which displays the staff grading area
-    **/
-    var server = new OpenAssessment.Server(runtime, element);
-    var view = new OpenAssessment.BaseView(runtime, element, server, data);
-    view.staffAreaView.installHandlers();
+export const StaffAssessmentBlock = (runtime, element, data) => {
+  /**
+  Render auxiliary view which displays the staff grading area
+  **/
+  var server = new Server(runtime, element);
+  var view = new BaseView(runtime, element, server, data);
+  view.staffAreaView.installHandlers();
 }
