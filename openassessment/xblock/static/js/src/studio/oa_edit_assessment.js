@@ -1,6 +1,5 @@
-import DatetimeControl
-import { Fields, IntField, ToggleControli, DatetimeControl } from './oa_edit_fields';
-import Notifier from './oa_notifier';
+import { DatetimeControl, Fields, IntField, ToggleControl } from './oa_edit_fields';
+import Notifier from './oa_edit_notifier';
 import { AssessmentToggleListener } from './oa_edit_listeners';
 import Container from './oa_container';
 import { TrainingExample } from './oa_container_item';

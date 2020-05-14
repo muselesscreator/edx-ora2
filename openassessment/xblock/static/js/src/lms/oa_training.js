@@ -1,7 +1,7 @@
 import $ from 'jquery';
 
-import DateTimeFactory from 'oa_datefactory';
-import Rubric from 'oa_rubric';
+import DateTimeFactory from './oa_datefactory';
+import Rubric from './oa_rubric';
 
 /**
 Interface for student training view.
@@ -154,3 +154,5 @@ export class StudentTrainingView {
       return this.baseView.buttonEnabled('.student-training--001__assessment__submit', isEnabled);
   }
 };
+
+export default StudentTrainingView;

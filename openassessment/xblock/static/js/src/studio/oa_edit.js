@@ -2,7 +2,7 @@ import $ from 'jquery';
 
 import Server from '../oa_server';
 
-import ValidationAlert from 'oa_edit_validation_alert';
+import ValidationAlert from './oa_edit_validation_alert';
 import { StudentTrainingListener } from './oa_edit_listeners';
 import {
   EditPeerAssessmentView,
@@ -10,7 +10,7 @@ import {
   EditStaffAssessmentView,
   EditStudentTrainingView,
 } from './oa_edit_assessment';
-import Notifier from './oa_notifier';
+import Notifier from './oa_edit_notifier';
 import EditPromptsView from './oa_edit_prompts';
 import EditSettingsView from './oa_edit_settings';
 import EditRubricView from './oa_edit_rubric';

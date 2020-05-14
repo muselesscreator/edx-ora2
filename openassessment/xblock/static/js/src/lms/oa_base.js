@@ -10,7 +10,7 @@ import StaffAreaView from './oa_staff_area';
 import FileUploader from './oa_file_upload';
 import CourseItemsListing from './oa_course_items_listing';
 
-import Server from '../os_server';
+import Server from '../oa_server';
 
 /**
 Interface for student-facing views.
@@ -104,7 +104,7 @@ export class BaseView {
    */
   srClear() {
       $(this.READER_FEEDBACK_CLASS).html('');
-  },
+  }
 
   /**
    * Add the text messages to the Aria live region.
@@ -119,7 +119,7 @@ export class BaseView {
           htmlFeedback = htmlFeedback + '<p>' + value + '</p>\n';
       });
       $readerFeedbackSelector.html(htmlFeedback);
-  },
+  }
 
   /**
    * Checks the rendering status of the views that may require Screen Reader Status updates.
@@ -136,7 +136,7 @@ export class BaseView {
           this.gradeView.isRendering ||
           this.trainingView.isRendering ||
           this.staffView.isRendering;
-  },
+  }
 
   /**
    * Updates text in the Aria live region if all sections are rendered and focuses on the specified ID.
@@ -163,7 +163,7 @@ export class BaseView {
           this.srStatusUpdates = [];
       }
       currentView.announceStatus = false;
-  },
+  }
 
   /**
    * Retrieves and returns the current status of a given step.
@@ -439,8 +439,8 @@ export const OpenAssessmentBlock = (runtime, element, data) => {
 /* XBlock JavaScript entry point for OpenAssessmentXBlock. */
 /* jshint unused:false */
 // eslint-disable-next-line no-unused-vars
-export const (CourseOpenResponsesListingBlock(runtime, element, data) => {
-  var view = new .CourseItemsListingView(runtime, element);
+export const CourseOpenResponsesListingBlock = (runtime, element, data) => {
+  var view = new CourseItemsListingView(runtime, element);
   view.refreshGrids();
 }
 

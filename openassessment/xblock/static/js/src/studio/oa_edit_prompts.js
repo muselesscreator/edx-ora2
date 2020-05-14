@@ -144,4 +144,4 @@ export class EditPromptsView {
   clearValidationErrors() {}
 };
 
-export default EditPromptsView';
+export default EditPromptsView;

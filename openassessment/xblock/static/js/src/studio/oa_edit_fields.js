@@ -181,7 +181,7 @@ timePicker (string): The CSS selector for the time input field.
 
 **/
 export class DatetimeControl {
-  constructorelement, datePicker, timePicker) {
+  constructor(element, datePicker, timePicker) {
     this.element = element;
     this.datePicker = datePicker;
     this.timePicker = timePicker;

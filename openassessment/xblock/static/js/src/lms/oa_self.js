@@ -1,5 +1,5 @@
-import DateTimeFactory from 'oa_datefactory';
-import Rubric from 'oa_rubric';
+import DateTimeFactory from './oa_datefactory';
+import Rubric from './oa_rubric';
 
 
 /**
@@ -14,7 +14,7 @@ Returns:
     OpenAssessment.SelfView
 **/
 export class SelfView {
-  UNSAVED_WARNING_KEY = 'self-assessment',
+  UNSAVED_WARNING_KEY = 'self-assessment';
 
   constructor(element, server, baseView) {
     this.element = element;

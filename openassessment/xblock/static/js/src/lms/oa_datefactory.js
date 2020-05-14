@@ -47,8 +47,8 @@ export class DateTimeFactory {
       (function(require) {
           require([
               'jquery',
-              'edx-ui-toolkit/js/utils/date-utils',
-              'edx-ui-toolkit/js/utils/string-utils',
+              'edx-ui-toolkit/src/js/utils/date-utils',
+              'edx-ui-toolkit/src/js/utils/string-utils',
           ], function($, DateUtils, StringUtils) {
               var context;
               var localTimeString;

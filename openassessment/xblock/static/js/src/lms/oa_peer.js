@@ -15,7 +15,7 @@ Returns:
     OpenAssessment.PeerView
 **/
 export class PeerView {
-  UNSAVED_WARNING_KEY = 'peer-assessment',
+  UNSAVED_WARNING_KEY = 'peer-assessment';
   constructor(element, server, baseView) {
     this.element = element;
     this.server = server;

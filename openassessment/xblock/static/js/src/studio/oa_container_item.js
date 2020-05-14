@@ -1,6 +1,6 @@
 import $ from 'jquery';
 
-import { Fields, IntField }  from './oa_edit_settings';
+import { Fields, IntField }  from './oa_edit_fields';
 import { Container } from './oa_container';
 
 export const ItemUtilities = {

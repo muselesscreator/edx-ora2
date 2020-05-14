@@ -561,7 +561,7 @@ export class StaffAreaView {
           view.loadStudentInfo('staff-info__student__grade');
       };
       this.callStaffAssess(submissionID, rubric, scope, successCallback, '.staff-override-error', 'regrade');
-  },
+  }
 
   /**
    * Submit the staff grade, and check out another learner for grading if continueGrading is true.
@@ -586,7 +586,7 @@ export class StaffAreaView {
           }
       };
       this.callStaffAssess(submissionID, rubric, scope, successCallback, '.staff-grade-error', 'full-grade');
-  },
+  }
 
   /**
    * Make the server call to submit the staff assessment.
@@ -611,3 +611,5 @@ export class StaffAreaView {
       });
   }
 }
+
+export default StaffAreaView;

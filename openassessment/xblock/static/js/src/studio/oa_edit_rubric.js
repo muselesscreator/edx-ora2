@@ -288,3 +288,5 @@ export class EditRubricView {
       });
   }
 };
+
+export default EditRubricView;

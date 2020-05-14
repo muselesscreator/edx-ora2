@@ -1,4 +1,4 @@
-import $ from '/jquery';
+import $ from 'jquery';
 
 import {
   DatetimeControl,
@@ -562,3 +562,5 @@ export class EditSettingsView {
       });
   }
 };
+
+export default EditSettingsView;

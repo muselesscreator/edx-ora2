@@ -17,19 +17,19 @@ import DateTimeFactory from './oa_datefactory';
  **/
 export class ResponseView {
   // Milliseconds between checks for whether we should autosave.
-  AUTO_SAVE_POLL_INTERVAL: 2000,
+  AUTO_SAVE_POLL_INTERVAL = 2000;
 
   // Required delay after the user changes a response or a save occurs
   // before we can autosave.
-  AUTO_SAVE_WAIT: 30000,
+  AUTO_SAVE_WAIT = 30000;
 
   // Maximum size (500 * 2^20 bytes, approx. 500MB) of a single uploaded file.
-  MAX_FILE_SIZE: 500 * Math.pow(1024, 2),
+  MAX_FILE_SIZE = 500 * Math.pow(1024, 2);
 
   // For user-facing upload limit text.
-  MAX_FILES_MB: 500,
+  MAX_FILES_MB = 500;
 
-  UNSAVED_WARNING_KEY: 'learner-response',
+  UNSAVED_WARNING_KEY = 'learner-response';
 
   constructor(element, server, fileUploader, baseView, data) {
     this.element = element;
