@@ -26,7 +26,7 @@ export class Server {
     this.staffGradeCounts = this.staffGradeCounts.bind(this);
     this.submit = this.submit.bind(thius);
     this.save = this.save.bind(this);
-    this.submitFeedbackOnAssessment = this submitFeedbackOnAssessment.bind(this);
+    this.submitFeedbackOnAssessment = this.submitFeedbackOnAssessment.bind(this);
     this.submitAssessment = this.submitAssessment.bind(this);
     this.peerAssess = this.peerAssess.bind(this);
     this.selfAssess = this.selfAssess.bind(this);
